@@ -25,6 +25,10 @@ describe('GET /users/:id', () => {
     expect(res.status).toBe(200);
     expect(res.body.nom).toBe('Alice');
   });
+  test('ne divulgue pas la technologie du serveur', async () => {
+    const res = await request(app).get('/users/1');
+    expect(res.headers['x-powered-by']).toBeUndefined();
+});
 
 test('retourne 404 pour un utilisateur inconnu', async () => {
   const res = await request(app).get('/users/999');
