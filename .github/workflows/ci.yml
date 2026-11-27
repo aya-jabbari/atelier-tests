@@ -11,7 +11,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - run: npm ci
@@ -21,7 +21,6 @@ jobs:
   integration:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-
     services:
       db:
         image: postgres:16-alpine
@@ -42,9 +41,45 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - run: npm ci
 
       - run: npm run test:int
+
+  sca:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Security audit
+        run: npm audit --audit-level=high
+
+  image-scan:
+    needs: [unit]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t atelier-app:${{ github.sha }} .
+
+      - name: Scan image with Trivy
+        run: >
+          docker run --rm
+          -v /var/run/docker.sock:/var/run/docker.sock
+          aquasec/trivy:latest image
+          --exit-code 1
+          --severity HIGH,CRITICAL
+          --ignore-unfixed
+          atelier-app:${{ github.sha }}
